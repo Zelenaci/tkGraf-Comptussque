@@ -143,8 +143,7 @@ class Application(tk.Tk):
         x_vals = []
         y_vals = []
         with open(file) as f:
-            x_vals = f.readline()
-            y_vals = f.readline()
+            pass           
         return x_vals, y_vals
 
     def plot(self, event=None):

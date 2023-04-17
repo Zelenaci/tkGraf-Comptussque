@@ -6,6 +6,8 @@ from tkinter import filedialog, messagebox
 from tkinter.ttk import Combobox
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
+import scipy.interpolate as interp
+import numpy as np
 
 
 class Application(tk.Tk):
@@ -23,6 +25,7 @@ class Application(tk.Tk):
         self.labelVar = tk.StringVar(value="")
         self.axisXVar = tk.StringVar(value="")
         self.axisYVar = tk.StringVar(value="")
+        self.interpolationVar = tk.StringVar(value="")
         self.lineVar = tk.StringVar(value="-")
         self.markerVar = tk.StringVar(value=None)
         self.colorVar = tk.StringVar(value="red")
@@ -47,7 +50,8 @@ class Application(tk.Tk):
             self.file_frame, text="Data v řádcích", variable=self.dataOrientVar, value="row")
         self.file_data_col = tk.Radiobutton(
             self.file_frame, text="Data ve sloupcích", variable=self.dataOrientVar, value="col")
-        self.plot_button = tk.Button(self.option_frame, text="PLOT", command=self.plot)
+        self.plot_button = tk.Button(
+            self.option_frame, text="PLOT", command=self.plot)
 
         self.file_name_entry.grid(row=0, column=0, sticky="e")
         self.file_button.grid(row=0, column=1, sticky="w")
@@ -73,7 +77,8 @@ class Application(tk.Tk):
         self.color_Cbox = Combobox(
             self.option_frame, textvariable=self.colorVar)
 
-        self.interpolation_Cbox = Combobox(self.option_frame)
+        self.interpolation_Cbox = Combobox(
+            self.option_frame, textvariable=self.interpolationVar)
         self.interpolation_label = tk.Label(
             self.option_frame, text="Druh interpolace: ")
 
@@ -82,12 +87,15 @@ class Application(tk.Tk):
         self.color_canvas = tk.Canvas(
             self.option_frame, height=20, bg="red", bd=0)
 
+        self.interpolation_Cbox['values'] = ["","CubicSpline"]
+
         self.line_Cbox['values'] = list(plt.Line2D.lineStyles.keys())[:4]
 
         self.color_Cbox['values'] = list(mcolors.CSS4_COLORS.keys())
 
-        self.marker_Cbox = Combobox(self.option_frame, textvariable=self.markerVar)
-        self.marker_Cbox['values'] = list(plt.Line2D.markers.keys())[:-7]
+        self.marker_Cbox = Combobox(
+            self.option_frame, textvariable=self.markerVar)
+        self.marker_Cbox['values'] = list(plt.Line2D.markers.keys())[:-16]
 
         self.option_label.grid(row=0, column=1, sticky="e", pady=5)
         self.label_label.grid(row=0, column=0, sticky="w")
@@ -112,8 +120,8 @@ class Application(tk.Tk):
     def set_file(self, event=None):
         file = filedialog.askopenfilename()
         self.fileNameVar.set(file)
-        
-    def get_file(self, event=None):    
+
+    def get_file(self, event=None):
         file = self.fileNameVar.get()
         return file
 
@@ -126,7 +134,7 @@ class Application(tk.Tk):
         y_vals = []
         with open(file) as f:
             for row in f:
-                x, y = map(int,row.split(','))
+                x, y = map(int, row.split(','))
                 x_vals.append(x)
                 y_vals.append(y)
         return x_vals, y_vals
@@ -134,10 +142,10 @@ class Application(tk.Tk):
     def read_data_col(self, file, event=None):
         x_vals = []
         y_vals = []
-        vals = [x_vals, y_vals]
-        f.readlines(1).split(',')
+        with open(file) as f:
+            x_vals = f.readline()
+            y_vals = f.readline()
         return x_vals, y_vals
-
 
     def plot(self, event=None):
 
@@ -148,9 +156,19 @@ class Application(tk.Tk):
             if self.dataOrientVar.get() == "row":
                 x_vals, y_vals = self.read_data_row(file)
             else:
-                x_vals, y_vals = self.read_data_col(file)
+                x_vals, y_vals = self.read_data_col(file)                
+            
+            color = self.colorVar.get()
+            lnstyle = self.lineVar.get()
 
-            plt.plot(x_vals, y_vals, linestyle=self.lineVar.get(), marker=self.markerVar.get(), color=self.colorVar.get())
+            if self.interpolationVar.get():
+                spl = interp.CubicSpline(x_vals, y_vals)
+                xnew = np.linspace(x_vals[0], x_vals[-1], x_vals[-1]*20)
+                plt.plot(xnew, spl(xnew), color=color)
+                lnstyle="None"
+
+            plt.plot(x_vals, y_vals,
+                     marker=self.markerVar.get(), linestyle=lnstyle, color=color)
             plt.title(self.labelVar.get())
             plt.xlabel(self.axisXVar.get())
             plt.ylabel(self.axisYVar.get())
